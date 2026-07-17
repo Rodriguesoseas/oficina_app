@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 import '../utils/parse.dart';
 
 class ItemEstoque {
@@ -12,6 +10,7 @@ class ItemEstoque {
     required this.precoUnitario,
     required this.ativo,
     required this.estoqueBaixo,
+    this.descricao,
   });
 
   final int id;
@@ -22,19 +21,16 @@ class ItemEstoque {
   final double precoUnitario;
   final bool ativo;
   final bool estoqueBaixo;
+  final String? descricao;
 
   double get progressoNormalizado {
     if (estoqueMinimo <= 0) return 1.0;
     return (quantidade / (estoqueMinimo * 4)).clamp(0.0, 1.0);
   }
 
-  Color get estoqueCor => estoqueBaixo
-      ? Colors.red
-      : (quantidade < estoqueMinimo * 2 ? Colors.orange : Colors.green);
-
   factory ItemEstoque.fromJson(Map<String, dynamic> json) {
     return ItemEstoque(
-      id: json['id'] as int,
+      id: parseInt(json['id']) ?? 0,
       nome: json['nome']?.toString() ?? '',
       categoria: json['categoria']?.toString() ?? '',
       quantidade: parseInt(json['quantidade']) ?? 0,
@@ -42,8 +38,19 @@ class ItemEstoque {
       precoUnitario: parseDouble(json['preco_unitario']),
       ativo: json['ativo'] == true,
       estoqueBaixo: json['estoque_baixo'] == true,
+      descricao: json['descricao']?.toString(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'nome': nome,
+        'categoria': categoria,
+        'quantidade': quantidade,
+        'estoque_minimo': estoqueMinimo,
+        'preco_unitario': precoUnitario,
+        'ativo': ativo,
+        if (descricao != null) 'descricao': descricao,
+      };
 
   ItemEstoque copyWith({
     int? id,
@@ -54,6 +61,7 @@ class ItemEstoque {
     double? precoUnitario,
     bool? ativo,
     bool? estoqueBaixo,
+    String? descricao,
   }) {
     return ItemEstoque(
       id: id ?? this.id,
@@ -64,6 +72,7 @@ class ItemEstoque {
       precoUnitario: precoUnitario ?? this.precoUnitario,
       ativo: ativo ?? this.ativo,
       estoqueBaixo: estoqueBaixo ?? this.estoqueBaixo,
+      descricao: descricao ?? this.descricao,
     );
   }
 }

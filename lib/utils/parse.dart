@@ -10,6 +10,13 @@ double parseDouble(dynamic value) {
   return double.tryParse(value.toString()) ?? 0;
 }
 
+DateTime? parseDateTime(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  return null;
+}
+
 List<T> parseList<T>(List data, T Function(Map<String, dynamic>) fromJson) {
   return data.whereType<Map<String, dynamic>>().map(fromJson).toList();
 }

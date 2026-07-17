@@ -4,8 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/item_estoque.dart';
 import '../providers/providers.dart';
 import '../utils/extensions.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/confirm_dialog.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/error_display.dart';
+import '../widgets/loading_indicator.dart';
 import '../widgets/item_estoque_card.dart';
 import 'estoque_form_screen.dart';
+import 'produto_detail_screen.dart';
 
 class EstoqueListScreen extends ConsumerWidget {
   const EstoqueListScreen({super.key});
@@ -36,17 +42,13 @@ class EstoqueListScreen extends ConsumerWidget {
           await ref.read(itensEstoqueProvider.future);
         },
         child: itensAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const LoadingIndicator(),
           error: (error, _) {
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    error.toUserMessage('Erro ao carregar estoque'),
-                    textAlign: TextAlign.center,
-                  ),
+                ErrorDisplay(
+                  message: error.toUserMessage('Erro ao carregar estoque'),
                 ),
               ],
             );
@@ -72,17 +74,11 @@ class _EstoqueListContent extends StatelessWidget {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
-          SizedBox(height: 120),
-          Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'Nenhum item no estoque',
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Toque em + para cadastrar o primeiro.',
-            textAlign: TextAlign.center,
+          SizedBox(height: 80),
+          EmptyState(
+            icon: Icons.inventory_2_outlined,
+            title: 'Nenhum item no estoque',
+            subtitle: 'Toque em + para cadastrar o primeiro.',
           ),
         ],
       );
@@ -97,17 +93,17 @@ class _EstoqueListContent extends StatelessWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: 8, bottom: 80),
+      padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: 80),
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Row(
                 children: [
                   const Icon(Icons.inventory_2, size: 28),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,12 +113,12 @@ class _EstoqueListContent extends StatelessWidget {
                           style: theme.textTheme.titleSmall,
                         ),
                         if (itensBaixos > 0) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppSpacing.xs),
                           Row(
                             children: [
                               Icon(Icons.warning_amber_rounded,
                                   size: 16, color: theme.colorScheme.error),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: AppSpacing.xs),
                               Text(
                                 '$itensBaixos com estoque baixo',
                                 style: theme.textTheme.bodySmall?.copyWith(
@@ -172,7 +168,7 @@ class _CategoriaSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 16, 8),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.xxl, AppSpacing.lg, AppSpacing.sm),
           child: Row(
             children: [
               Icon(_categoriaIcon(categoria), size: 18, color: theme.colorScheme.primary),
@@ -203,11 +199,18 @@ class _CategoriaSection extends StatelessWidget {
             ],
           ),
         ),
-        ...itens.map((item) => Consumer(builder: (context, ref, _) {
+          ...itens.map((item) => Consumer(builder: (context, ref, _) {
           return ItemEstoqueCard(
             item: item,
             modo: ItemEstoqueCardMode.gerencia,
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ProdutoDetailScreen(itemId: item.id),
+                ),
+              );
+            },
             onEdit: () async {
               final editou = await Navigator.of(context).push<bool>(
                 MaterialPageRoute<bool>(
@@ -219,25 +222,14 @@ class _CategoriaSection extends StatelessWidget {
               }
             },
             onToggleActive: () async {
-              final confirmou = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Desativar item'),
-                  content: Text(
+              final confirmou = await showConfirmDialog(
+                context,
+                title: 'Desativar item',
+                message:
                     'Tem certeza que deseja desativar "${item.nome}"?\n\n'
                     'Itens desativados não aparecem no catálogo de peças do atendimento.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancelar'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Desativar'),
-                    ),
-                  ],
-                ),
+                confirmLabel: 'Desativar',
+                cancelLabel: 'Cancelar',
               );
               if (confirmou == true) {
                 try {

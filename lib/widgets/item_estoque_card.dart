@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/item_estoque.dart';
 import '../utils/currency.dart';
+import 'status_badge.dart';
 
 enum ItemEstoqueCardMode {
   selecao,
@@ -16,6 +17,7 @@ class ItemEstoqueCard extends StatelessWidget {
     this.quantidade,
     this.onIncrement,
     this.onDecrement,
+    this.onTap,
     this.onEdit,
     this.onToggleActive,
     this.margin,
@@ -26,6 +28,7 @@ class ItemEstoqueCard extends StatelessWidget {
   final int? quantidade;
   final VoidCallback? onIncrement;
   final VoidCallback? onDecrement;
+  final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onToggleActive;
   final EdgeInsetsGeometry? margin;
@@ -42,19 +45,22 @@ class ItemEstoqueCard extends StatelessWidget {
     return Card(
       margin: margin,
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 12),
-            _buildProgressBar(),
-            const SizedBox(height: 8),
-            _buildInfoRow(context),
-            const SizedBox(height: 12),
-            _buildActionButtons(context),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 12),
+              _buildProgressBar(context),
+              const SizedBox(height: 8),
+              _buildInfoRow(context),
+              const SizedBox(height: 12),
+              _buildActionButtons(context),
+            ],
+          ),
         ),
       ),
     );
@@ -67,7 +73,7 @@ class ItemEstoqueCard extends StatelessWidget {
         if (item.estoqueBaixo)
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: Icon(Icons.warning, size: 18, color: Colors.red),
+            child: Icon(Icons.warning, size: 18, color: theme.colorScheme.error),
           ),
         Expanded(
           child: Text(
@@ -90,13 +96,19 @@ class ItemEstoqueCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressBar() {
+  Widget _buildProgressBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final cor = item.estoqueBaixo
+        ? theme.colorScheme.error
+        : item.quantidade < item.estoqueMinimo * 2
+            ? theme.colorScheme.tertiary
+            : theme.colorScheme.primary;
     return ClipRRect(
       borderRadius: BorderRadius.circular(4),
       child: LinearProgressIndicator(
         value: item.progressoNormalizado,
-        backgroundColor: item.estoqueCor.withAlpha(25),
-        valueColor: AlwaysStoppedAnimation(item.estoqueCor),
+        backgroundColor: cor.withAlpha(25),
+        valueColor: AlwaysStoppedAnimation(cor),
         minHeight: 8,
       ),
     );
@@ -115,39 +127,33 @@ class ItemEstoqueCard extends StatelessWidget {
           Text(
             'mín: ${item.estoqueMinimo}',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
+              color: theme.colorScheme.outline,
             ),
           ),
         ],
         const Spacer(),
         if (item.estoqueBaixo)
-          _buildBadge('ESTOQUE BAIXO!', Colors.red, theme)
+          StatusBadge(
+            label: 'ESTOQUE BAIXO!',
+            color: theme.colorScheme.error,
+            size: StatusBadgeSize.sm,
+          )
         else if (item.quantidade < item.estoqueMinimo * 2)
-          _buildBadge('Atenção', Colors.orange, theme)
+          StatusBadge(
+            label: 'Atenção',
+            color: theme.colorScheme.tertiary,
+            size: StatusBadgeSize.sm,
+          )
         else
-          _buildBadge('OK', Colors.green, theme),
+          StatusBadge(
+            label: 'OK',
+            color: theme.colorScheme.primary,
+            size: StatusBadgeSize.sm,
+          ),
       ],
     );
   }
 
-  Widget _buildBadge(String text, Color color, ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withAlpha(25),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha(77)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
 
   Widget _buildActionButtons(BuildContext context) {
     switch (modo) {
@@ -159,6 +165,7 @@ class ItemEstoqueCard extends StatelessWidget {
   }
 
   Widget _buildSelecaoButtons(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -169,7 +176,7 @@ class ItemEstoqueCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(

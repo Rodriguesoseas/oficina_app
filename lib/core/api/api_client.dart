@@ -14,7 +14,6 @@ class ApiClient {
                     connectTimeout: const Duration(seconds: 120),
                     receiveTimeout: const Duration(seconds: 120),
                     headers: {
-                      'Authorization': 'Bearer ${ApiConfig.apiToken}',
                       'Content-Type': 'application/json',
                       'Accept': 'application/json',
                     },
@@ -23,6 +22,22 @@ class ApiClient {
           ..interceptors.add(_LogInterceptor());
 
   final Dio _dio;
+  String? _token;
+
+  void setToken(String? token) {
+    _token = token;
+  }
+
+  Map<String, dynamic> get _headers {
+    final headers = <String, dynamic>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (_token != null) {
+      headers['Authorization'] = 'Bearer $_token';
+    }
+    return headers;
+  }
 
   Future<T> get<T>(
     String path, {
@@ -30,7 +45,8 @@ class ApiClient {
     T Function(dynamic data)? parser,
   }) async {
     return _request(
-      () => _dio.get<dynamic>(path, queryParameters: queryParameters),
+      () => _dio.get<dynamic>(path,
+          queryParameters: queryParameters, options: Options(headers: _headers)),
       parser: parser,
     );
   }
@@ -41,7 +57,7 @@ class ApiClient {
     T Function(dynamic data)? parser,
   }) async {
     return _request(
-      () => _dio.post<dynamic>(path, data: data),
+      () => _dio.post<dynamic>(path, data: data, options: Options(headers: _headers)),
       parser: parser,
     );
   }
@@ -52,14 +68,14 @@ class ApiClient {
     T Function(dynamic data)? parser,
   }) async {
     return _request(
-      () => _dio.patch<dynamic>(path, data: data),
+      () => _dio.patch<dynamic>(path, data: data, options: Options(headers: _headers)),
       parser: parser,
     );
   }
 
   Future<void> delete(String path) async {
     try {
-      await _dio.delete<dynamic>(path);
+      await _dio.delete<dynamic>(path, options: Options(headers: _headers));
     } on DioException catch (error) {
       throw _mapError(error);
     }

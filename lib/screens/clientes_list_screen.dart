@@ -4,12 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/cliente.dart';
 import '../providers/providers.dart';
 import '../utils/extensions.dart';
-import '../widgets/cliente_tile.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/client_card.dart';
+import '../widgets/confirm_dialog.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/error_display.dart';
+import '../widgets/loading_indicator.dart';
 import 'cliente_detail_screen.dart';
 import 'cliente_form_screen.dart';
 
 class ClientesListScreen extends ConsumerStatefulWidget {
-  const ClientesListScreen({super.key});
+  const ClientesListScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   ConsumerState<ClientesListScreen> createState() => _ClientesListScreenState();
@@ -62,6 +69,9 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
   @override
   Widget build(BuildContext context) {
     final clientesAsync = ref.watch(clientesListProvider);
+    final body = _buildBody(clientesAsync);
+
+    if (widget.embedded) return body;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Clientes')),
@@ -79,18 +89,20 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
         },
         child: const Icon(Icons.person_add),
       ),
-      body: Column(
+      body: body,
+    );
+  }
+
+  Widget _buildBody(AsyncValue<List<Cliente>> clientesAsync) {
+    return Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.xs),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Buscar por nome ou telefone',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
@@ -111,7 +123,7 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
           ),
           if (_searchController.text.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
               child: Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton.tonalIcon(
@@ -136,17 +148,13 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
                       await ref.read(clientesListProvider.future);
                     },
                     child: clientesAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () => const LoadingIndicator(),
                       error: (error, _) {
                         return ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Text(
-                                error.toUserMessage('Erro ao carregar clientes'),
-                                textAlign: TextAlign.center,
-                              ),
+                            ErrorDisplay(
+                              message: error.toUserMessage('Erro ao carregar clientes'),
                             ),
                           ],
                         );
@@ -157,16 +165,10 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             children: const [
                               SizedBox(height: 80),
-                              Icon(Icons.people_outline, size: 64, color: Colors.grey),
-                              SizedBox(height: 16),
-                              Text(
-                                'Nenhum cliente cadastrado',
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Toque em + para cadastrar o primeiro.',
-                                textAlign: TextAlign.center,
+                              EmptyState(
+                                icon: Icons.people_outline,
+                                title: 'Nenhum cliente cadastrado',
+                                subtitle: 'Toque em + para cadastrar o primeiro.',
                               ),
                             ],
                           );
@@ -174,11 +176,11 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
 
                         return ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
                           itemCount: clientes.length,
                           itemBuilder: (context, index) {
                             final cliente = clientes[index];
-                            return ClienteTile(
+                            return ClientCard(
                               cliente: cliente,
                               onTap: () async {
                                 await Navigator.of(context).push(
@@ -188,6 +190,7 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
                                 );
                                 ref.invalidate(clientesListProvider);
                               },
+                              onDelete: () => _confirmarExclusao(cliente),
                             );
                           },
                         );
@@ -196,24 +199,23 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
                   ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildResultadosBusca() {
     if (_buscando) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingIndicator();
     }
 
     if (_erro != null) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(_erro!, textAlign: TextAlign.center),
-      );
+      return ErrorDisplay(message: _erro!);
     }
 
     if (_resultados.isEmpty) {
-      return const Center(child: Text('Nenhum cliente encontrado'));
+      return const Center(child: EmptyState(
+        icon: Icons.search_off,
+        title: 'Nenhum cliente encontrado',
+      ));
     }
 
     return ListView.builder(
@@ -222,7 +224,7 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
       itemCount: _resultados.length,
       itemBuilder: (context, index) {
         final cliente = _resultados[index];
-        return ClienteTile(
+        return ClientCard(
           cliente: cliente,
           onTap: () async {
             await Navigator.of(context).push(
@@ -232,8 +234,36 @@ class _ClientesListScreenState extends ConsumerState<ClientesListScreen> {
             );
             ref.invalidate(clientesListProvider);
           },
+          onDelete: () => _confirmarExclusao(cliente),
         );
       },
     );
+  }
+
+  Future<void> _confirmarExclusao(Cliente cliente) async {
+    final confirmou = await showConfirmDialog(
+      context,
+      title: 'Excluir cliente',
+      message: 'Tem certeza que deseja excluir ${cliente.nome}?\n\n'
+          'As motos serão removidas e as ordens de serviço ficarão sem vínculo.',
+      confirmLabel: 'Excluir',
+    );
+    if (!confirmou || !mounted) return;
+
+    try {
+      await ref.read(clienteServiceProvider).deletar(cliente.id);
+      if (!mounted) return;
+      ref.invalidate(clientesListProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${cliente.nome} excluído com sucesso')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toUserMessage('Erro ao excluir cliente')),
+        ),
+      );
+    }
   }
 }

@@ -7,11 +7,10 @@ class MotoService {
 
   final ApiClient _client;
 
-  Future<List<Moto>> buscarPorPlaca(String placa) {
-    return _client.get<List<Moto>>(
-      '/motos/busca',
-      queryParameters: {'placa': placa},
-      parser: (data) => parseList(data as List, Moto.fromJson),
+  Future<Moto> detalhe(int id) {
+    return _client.get<Moto>(
+      '/motos/$id',
+      parser: (json) => Moto.fromJson(json as Map<String, dynamic>),
     );
   }
 
@@ -21,6 +20,14 @@ class MotoService {
       '/motos',
       data: {'moto': data},
       parser: (json) => Moto.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<List<Moto>> buscarPorPlaca(String placa) {
+    return _client.get<List<Moto>>(
+      '/motos/busca',
+      queryParameters: {'placa': placa},
+      parser: (data) => parseList(data as List, Moto.fromJson),
     );
   }
 }

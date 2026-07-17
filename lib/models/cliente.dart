@@ -16,7 +16,7 @@ class Cliente {
   factory Cliente.fromJson(Map<String, dynamic> json) {
     final motosJson = json['motos'];
     return Cliente(
-      id: json['id'] as int,
+      id: parseInt(json['id']) ?? 0,
       nome: json['nome']?.toString() ?? '',
       telefone: json['telefone']?.toString(),
       motos: motosJson is List
@@ -27,6 +27,11 @@ class Cliente {
           : const [],
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'nome': nome,
+        if (telefone != null) 'telefone': telefone,
+      };
 }
 
 class MotoResumo {
@@ -37,6 +42,7 @@ class MotoResumo {
     required this.modelo,
     required this.placa,
     this.quilometragem,
+    this.ano,
   });
 
   final int id;
@@ -45,17 +51,32 @@ class MotoResumo {
   final String modelo;
   final String placa;
   final int? quilometragem;
+  final int? ano;
 
   factory MotoResumo.fromJson(Map<String, dynamic> json) {
     return MotoResumo(
-      id: json['id'] as int,
-      clienteId: json['cliente_id'] as int,
+      id: parseInt(json['id']) ?? 0,
+      clienteId: parseInt(json['cliente_id']) ?? 0,
       marca: json['marca']?.toString() ?? '',
       modelo: json['modelo']?.toString() ?? '',
       placa: json['placa']?.toString() ?? '',
       quilometragem: parseInt(json['quilometragem']),
+      ano: parseInt(json['ano']),
     );
   }
 
-  String get descricao => '$marca $modelo ($placa)';
+  String get descricao {
+    if (ano != null) return '$marca $modelo $ano ($placa)';
+    return '$marca $modelo ($placa)';
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'cliente_id': clienteId,
+        'marca': marca,
+        'modelo': modelo,
+        'placa': placa,
+        if (quilometragem != null) 'quilometragem': quilometragem,
+        if (ano != null) 'ano': ano,
+      };
 }

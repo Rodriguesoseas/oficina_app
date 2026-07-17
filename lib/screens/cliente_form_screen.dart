@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/cliente.dart';
 import '../providers/providers.dart';
 import '../utils/extensions.dart';
+import '../theme/app_spacing.dart';
 import '../widgets/form_section_card.dart';
+import '../widgets/saving_button.dart';
 
 class ClienteFormScreen extends ConsumerStatefulWidget {
   const ClienteFormScreen({super.key, this.cliente});
@@ -39,14 +41,15 @@ class _ClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
   }
 
   Future<void> _salvar() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState == null || !_formKey.currentState!.validate()) return;
 
     setState(() => _salvando = true);
 
     try {
-      final data = {
+      final data = <String, dynamic>{
         'nome': _nomeController.text.trim(),
-        'telefone': _telefoneController.text.trim(),
+        if (_telefoneController.text.trim().isNotEmpty)
+          'telefone': _telefoneController.text.trim(),
       };
 
       if (_editando) {
@@ -85,7 +88,7 @@ class _ClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
         title: Text(_editando ? 'Editar Cliente' : 'Novo Cliente'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           Form(
             key: _formKey,
@@ -96,7 +99,7 @@ class _ClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Nome',
                     prefixIcon: Icon(Icons.person),
-                    border: OutlineInputBorder(),
+
                   ),
                   textCapitalization: TextCapitalization.words,
                   validator: (v) =>
@@ -107,24 +110,19 @@ class _ClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Telefone',
                     prefixIcon: Icon(Icons.phone),
-                    border: OutlineInputBorder(),
+
                   ),
                   keyboardType: TextInputType.phone,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 32),
-          FilledButton.icon(
-            onPressed: _salvando ? null : _salvar,
-            icon: _salvando
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.save),
-            label: Text(_editando ? 'Atualizar Cliente' : 'Salvar Cliente'),
+          const SizedBox(height: AppSpacing.section),
+          SavingButton(
+            label: _editando ? 'Atualizar Cliente' : 'Salvar Cliente',
+            onPressed: _salvar,
+            isSaving: _salvando,
+            icon: Icons.save,
           ),
         ],
       ),

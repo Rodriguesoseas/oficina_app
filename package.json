@@ -1,0 +1,21 @@
+{
+  "name": "oficina_app",
+  "version": "1.0.0",
+  "description": "App mobile Flutter para gestão de oficina de motos. Consome a API Rails em `../oficina_api`.",
+  "main": "serve.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@marp-team/marp-cli": "^4.4.1",
+    "puppeteer-core": "^25.3.0"
+  }
+}

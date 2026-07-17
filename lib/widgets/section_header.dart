@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_spacing.dart';
+
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
     super.key,
     required this.icon,
     required this.title,
+    this.count,
+    this.actionLabel,
+    this.onAction,
     this.color,
-    this.trailing,
   });
 
   final IconData icon;
   final String title;
+  final int? count;
+  final String? actionLabel;
+  final VoidCallback? onAction;
   final Color? color;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -20,11 +26,11 @@ class SectionHeader extends StatelessWidget {
     final cor = color ?? theme.colorScheme.primary;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+      padding: const EdgeInsets.only(left: AppSpacing.xs, bottom: AppSpacing.sm),
       child: Row(
         children: [
           Icon(icon, size: 18, color: cor),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Text(
             title,
             style: theme.textTheme.titleMedium?.copyWith(
@@ -32,10 +38,31 @@ class SectionHeader extends StatelessWidget {
               color: cor,
             ),
           ),
-          if (trailing != null) ...[
-            const Spacer(),
-            trailing!,
+          if (count != null) ...[
+            const SizedBox(width: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: cor.withAlpha(25),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: cor,
+                ),
+              ),
+            ),
           ],
+          const Spacer(),
+          if (actionLabel != null && onAction != null)
+            TextButton.icon(
+              onPressed: onAction,
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(actionLabel!),
+            ),
         ],
       ),
     );

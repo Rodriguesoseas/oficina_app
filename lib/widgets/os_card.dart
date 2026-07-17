@@ -1,160 +1,134 @@
 import 'package:flutter/material.dart';
 
 import '../models/ordem_servico.dart';
+import '../theme/app_spacing.dart';
 import '../utils/currency.dart';
+import '../utils/status_os.dart';
 
 class OsCard extends StatelessWidget {
   const OsCard({
     super.key,
     required this.ordem,
-    required this.onTap,
+    this.onTap,
     this.onDelete,
   });
 
   final OrdemServico ordem;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final VoidCallback? onDelete;
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'concluido':
-        return Colors.green;
-      case 'em_andamento':
-        return Colors.blue;
-      case 'aberto':
-        return Colors.orange;
-      case 'cancelado':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _servicoIcon(String nome) {
-    switch (nome.toLowerCase()) {
-      case _ when nome.contains('óleo') || nome.contains('oleo'):
-        return Icons.oil_barrel;
-      case _ when nome.contains('revis') || nome.contains('revisão'):
-        return Icons.build;
-      case _ when nome.contains('freio'):
-        return Icons.disc_full;
-      case _ when nome.contains('relação') || nome.contains('relacao'):
-        return Icons.settings_suggest;
-      case _ when nome.contains('pneu'):
-        return Icons.circle;
-      case _ when nome.contains('elétri') || nome.contains('eletri'):
-        return Icons.bolt;
-      default:
-        return Icons.handyman;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statusColor = _statusColor(ordem.status);
+    final cor = statusOsColor(ordem.status, atrasada: ordem.isAtrasada);
+    final label = statusOsLabel(ordem.status);
 
     return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Row(
+        child: Column(
           children: [
-            Container(width: 5, height: 120, color: statusColor),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      radius: 22,
-                      child: Icon(
-                        _servicoIcon(ordem.tipoServico?.nome ?? ''),
-                        size: 22,
-                        color: theme.colorScheme.primary,
+            Container(
+              height: 4,
+              color: cor,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: cor.withAlpha(25),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: cor.withAlpha(77)),
+                        ),
+                        child: Text(
+                          label.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: cor,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  ordem.tipoServico?.nome ?? 'Serviço #${ordem.tipoServicoId}',
-                                  style: theme.textTheme.titleMedium,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Text(
-                                formatCurrency(ordem.valorTotal),
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            ordem.tituloCliente,
-                            style: theme.textTheme.bodyMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            ordem.tituloMoto,
-                            style: theme.textTheme.bodyMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withAlpha(38),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  ordem.status,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: statusColor,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                formatDateTime(ordem.createdAt),
-                                style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
-                              ),
-                              const Spacer(),
-                              if (onDelete != null)
-                                SizedBox(
-                                  height: 32,
-                                  width: 32,
-                                  child: IconButton(
-                                    padding: EdgeInsets.zero,
-                                    icon: Icon(Icons.delete_outline, size: 18,
-                                        color: theme.colorScheme.error),
-                                    onPressed: onDelete,
-                                    tooltip: 'Excluir',
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        '#${ordem.id}',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
                       ),
+                      const Spacer(),
+                      if (ordem.isAtrasada)
+                        Icon(Icons.warning_amber_rounded, size: 18, color: theme.colorScheme.error),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Icon(Icons.person_outline, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          ordem.clienteNome,
+                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (ordem.motoDescricao != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.motorcycle_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Text(
+                          ordem.motoDescricao!,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
                     ),
                   ],
-                ),
+                  if (ordem.prazo != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.event_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Entrega: ${ordem.prazo!.day.toString().padLeft(2, '0')}/${ordem.prazo!.month.toString().padLeft(2, '0')}/${ordem.prazo!.year}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ],
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        formatCurrency(ordem.valorTotal),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/item_estoque.dart';
 import '../providers/providers.dart';
 import '../utils/extensions.dart';
+import '../theme/app_spacing.dart';
 import '../widgets/form_section_card.dart';
+import '../widgets/saving_button.dart';
 
 const _categorias = [
   'oleo', 'filtro', 'pastilha', 'lona', 'relacao',
@@ -55,7 +57,7 @@ class _EstoqueFormScreenState extends ConsumerState<EstoqueFormScreen> {
   }
 
   Future<void> _salvar() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState == null || !_formKey.currentState!.validate()) return;
 
     setState(() => _salvando = true);
 
@@ -67,7 +69,7 @@ class _EstoqueFormScreenState extends ConsumerState<EstoqueFormScreen> {
         'estoque_minimo': int.tryParse(_estoqueMinimoController.text) ?? 0,
         'preco_unitario': double.tryParse(
           _precoController.text.replaceAll(',', '.'),
-        ),
+        ) ?? 0.0,
         'ativo': _ativo,
       };
 
@@ -109,7 +111,7 @@ class _EstoqueFormScreenState extends ConsumerState<EstoqueFormScreen> {
         title: Text(_editando ? 'Editar Item' : 'Novo Item'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           Form(
             key: _formKey,
@@ -122,7 +124,8 @@ class _EstoqueFormScreenState extends ConsumerState<EstoqueFormScreen> {
                     labelText: 'Nome do item',
                     hintText: 'Ex: Óleo 1L, Filtro de Óleo...',
                     prefixIcon: Icon(Icons.label),
-                    border: OutlineInputBorder(),
+
+
                   ),
                   textCapitalization: TextCapitalization.words,
                   validator: (v) =>
@@ -133,7 +136,8 @@ class _EstoqueFormScreenState extends ConsumerState<EstoqueFormScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Categoria',
                     prefixIcon: Icon(Icons.folder),
-                    border: OutlineInputBorder(),
+
+
                   ),
                   items: _categorias.map((c) {
                     return DropdownMenuItem(
@@ -150,7 +154,8 @@ class _EstoqueFormScreenState extends ConsumerState<EstoqueFormScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Quantidade em estoque',
                     prefixIcon: Icon(Icons.numbers),
-                    border: OutlineInputBorder(),
+
+
                   ),
                   keyboardType: TextInputType.number,
                 ),
@@ -159,7 +164,8 @@ class _EstoqueFormScreenState extends ConsumerState<EstoqueFormScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Estoque mínimo',
                     prefixIcon: Icon(Icons.warning_amber),
-                    border: OutlineInputBorder(),
+
+
                   ),
                   keyboardType: TextInputType.number,
                 ),
@@ -168,7 +174,8 @@ class _EstoqueFormScreenState extends ConsumerState<EstoqueFormScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Preço unitário (R\$)',
                     prefixIcon: Icon(Icons.attach_money),
-                    border: OutlineInputBorder(),
+
+
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -201,17 +208,12 @@ class _EstoqueFormScreenState extends ConsumerState<EstoqueFormScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 32),
-          FilledButton.icon(
-            onPressed: _salvando ? null : _salvar,
-            icon: _salvando
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.save),
-            label: Text(_editando ? 'Atualizar Item' : 'Salvar Item'),
+          const SizedBox(height: AppSpacing.section),
+          SavingButton(
+            label: _editando ? 'Atualizar Item' : 'Salvar Item',
+            onPressed: _salvar,
+            isSaving: _salvando,
+            icon: Icons.save,
           ),
         ],
       ),

@@ -1,0 +1,568 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../models/cliente.dart';
+import '../models/dashboard_data.dart';
+import '../models/moto.dart';
+import '../models/ordem_servico.dart';
+import '../providers/providers.dart';
+import '../theme/app_spacing.dart';
+import '../utils/extensions.dart';
+import '../utils/status_os.dart';
+import '../widgets/action_card.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/error_display.dart';
+import '../widgets/loading_indicator.dart';
+import '../widgets/section_header.dart';
+import 'cliente_form_screen.dart';
+import 'clientes_list_screen.dart';
+import 'entrada_estoque_screen.dart';
+import 'estoque_list_screen.dart';
+import 'moto_form_screen.dart';
+import 'nova_ordem_servico_screen.dart';
+import 'ordem_servico_detail_screen.dart';
+import 'ordens_servico_list_screen.dart';
+import 'agenda_screen.dart';
+import 'alertas_screen.dart';
+import 'configuracoes_screen.dart';
+import 'relatorios_screen.dart';
+import 'usuarios_screen.dart';
+
+class HomeScreen extends ConsumerWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboardAsync = ref.watch(dashboardProvider);
+    final theme = Theme.of(context);
+    final isDark = ref.watch(darkModeProvider);
+    final now = DateTime.now();
+    final dateFormat = DateFormat("EEEE, dd 'de' MMMM 'de' yyyy", 'pt_BR');
+    final timeFormat = DateFormat('HH:mm');
+
+    return Scaffold(
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(color: theme.colorScheme.primaryContainer),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Icon(Icons.two_wheeler, size: 40, color: theme.colorScheme.primary),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text('A2M Motos', style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                  )),
+                  Text('Sistema de Gestão', style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                  )),
+                ],
+              ),
+            ),
+            _DrawerItem(Icons.dashboard, 'Dashboard', () => Navigator.pop(context)),
+            _DrawerItem(Icons.assignment, 'Ordens de Serviço', () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdensServicoListScreen()));
+            }),
+            _DrawerItem(Icons.people, 'Clientes', () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ClientesListScreen()));
+            }),
+            _DrawerItem(Icons.motorcycle, 'Motos', () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ClientesListScreen()));
+            }),
+            _DrawerItem(Icons.inventory_2, 'Estoque', () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const EstoqueListScreen()));
+            }),
+            _DrawerItem(Icons.calendar_month, 'Agenda', () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AgendaScreen()));
+            }),
+            const Divider(),
+            _DrawerItem(Icons.notifications, 'Alertas', () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AlertasScreen()));
+            }),
+            _DrawerItem(Icons.bar_chart, 'Relatórios', () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const RelatoriosScreen()));
+            }),
+            _DrawerItem(Icons.people_outline, 'Usuários', () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const UsuariosScreen()));
+            }),
+            _DrawerItem(Icons.settings, 'Configurações', () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ConfiguracoesScreen()));
+            }),
+          ],
+        ),
+      ),
+      appBar: AppBar(
+        title: const Text('A2M Motos'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ClientesListScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.search),
+            tooltip: 'Buscar',
+          ),
+          IconButton(
+            onPressed: () {
+              ref.read(darkModeProvider.notifier).update((state) => !state);
+            },
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+            tooltip: 'Alternar tema',
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(dashboardProvider);
+          await ref.read(dashboardProvider.future);
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 88),
+          children: [
+            _buildHeader(theme, now, dateFormat, timeFormat),
+            const SizedBox(height: AppSpacing.xl),
+            _buildQuickActions(context, ref, theme),
+            const SizedBox(height: AppSpacing.xl),
+            dashboardAsync.when(
+              loading: () => const LoadingIndicator(),
+              error: (error, _) => ErrorDisplay(
+                message: error.toUserMessage('Erro ao carregar dashboard'),
+              ),
+              data: (data) => Column(
+                children: [
+                  _buildIndicatorGrid(context, theme, data),
+                  const SizedBox(height: AppSpacing.xl),
+                  _buildAlertasSection(context, theme, data),
+                  const SizedBox(height: AppSpacing.lg),
+                  _buildUltimasOsSection(context, ref, theme, data),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    ThemeData theme,
+    DateTime now,
+    DateFormat dateFormat,
+    DateFormat timeFormat,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Olá!',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            dateFormat.format(now),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            timeFormat.format(now),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, WidgetRef ref, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Ações Rápidas',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: ActionCard(
+                icon: Icons.assignment_add,
+                label: 'Nova\nOS',
+                color: theme.colorScheme.primary,
+                onTap: () async {
+                  final criou = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => const NovaOrdemServicoScreen(),
+                    ),
+                  );
+                  if (criou == true) ref.invalidate(dashboardProvider);
+                },
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: ActionCard(
+                icon: Icons.person_add,
+                label: 'Novo\nCliente',
+                color: theme.colorScheme.secondary,
+                onTap: () async {
+                  final criou = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => const ClienteFormScreen(),
+                    ),
+                  );
+                  if (criou == true) {
+                    ref.invalidate(dashboardProvider);
+                    ref.invalidate(clientesListProvider);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: ActionCard(
+                icon: Icons.motorcycle,
+                label: 'Nova\nMoto',
+                color: theme.colorScheme.tertiary,
+                onTap: () async {
+                  final clientes = await ref.read(clienteServiceProvider).listarTodos();
+                  if (!context.mounted || clientes.isEmpty) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Cadastre um cliente primeiro')),
+                      );
+                    }
+                    return;
+                  }
+                  final selecionado = await showDialog<Cliente>(
+                    context: context,
+                    builder: (ctx) => SimpleDialog(
+                      title: const Text('Selecione o cliente'),
+                      children: clientes.map((c) => SimpleDialogOption(
+                        onPressed: () => Navigator.pop(ctx, c),
+                        child: Text(c.nome),
+                      )).toList(),
+                    ),
+                  );
+                  if (selecionado != null && context.mounted) {
+                    final moto = await Navigator.of(context).push<Moto>(
+                      MaterialPageRoute<Moto>(
+                        builder: (_) => MotoFormScreen(clienteId: selecionado.id),
+                      ),
+                    );
+                    if (moto != null) ref.invalidate(dashboardProvider);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: ActionCard(
+                icon: Icons.inventory_2,
+                label: 'Entrada\nEstoque',
+                color: theme.colorScheme.error,
+                onTap: () async {
+                  final criou = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => const EntradaEstoqueScreen(),
+                    ),
+                  );
+                  if (criou == true) ref.invalidate(dashboardProvider);
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIndicatorGrid(BuildContext context, ThemeData theme, DashboardData data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Indicadores',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: AppSpacing.sm,
+          crossAxisSpacing: AppSpacing.sm,
+          childAspectRatio: 1,
+          children: [
+            _IndicatorCard(
+              icon: Icons.motorcycle,
+              label: 'Motos\nOficina',
+              value: '${data.motosNaOficina}',
+              color: theme.colorScheme.primary,
+            ),
+            _IndicatorCard(
+              icon: Icons.build,
+              label: 'OS\nAndamento',
+              value: '${data.osEmAndamento}',
+              color: theme.colorScheme.secondary,
+            ),
+            _IndicatorCard(
+              icon: Icons.check_circle,
+              label: 'Entregas\nHoje',
+              value: '${data.entregasHoje}',
+              color: Colors.green,
+            ),
+            _IndicatorCard(
+              icon: Icons.warning,
+              label: 'OS\nAtrasadas',
+              value: '${data.osAtrasadas}',
+              color: theme.colorScheme.error,
+            ),
+            _IndicatorCard(
+              icon: Icons.inventory,
+              label: 'Estoque\nBaixo',
+              value: '${data.itensEstoqueBaixo}',
+              color: Colors.orange,
+            ),
+            _IndicatorCard(
+              icon: Icons.attach_money,
+              label: 'Faturamento\nHoje',
+              value: 'R\$ ${data.faturamentoDia.toStringAsFixed(0)}',
+              color: Colors.green,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAlertasSection(BuildContext context, ThemeData theme, DashboardData data) {
+    if (data.alertas.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          icon: Icons.notifications,
+          title: 'Alertas',
+          count: data.alertas.length,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ...data.alertas.take(3).map((alerta) => Card(
+          clipBehavior: Clip.antiAlias,
+          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: InkWell(
+            onTap: () {},
+            child: ListTile(
+              leading: Icon(
+                alerta.isOsAtrasada
+                    ? Icons.warning
+                    : alerta.isEstoqueBaixo
+                        ? Icons.inventory
+                        : Icons.notifications,
+                color: alerta.isOsAtrasada
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.primary,
+              ),
+              title: Text(alerta.mensagem, style: theme.textTheme.bodyMedium),
+              trailing: alerta.lido ? null : Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+          ),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildUltimasOsSection(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    DashboardData data,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          icon: Icons.assignment,
+          title: 'Últimas OS',
+          actionLabel: 'Ver todas',
+          onAction: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const OrdensServicoListScreen(),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (data.ultimasOS.isEmpty)
+          const EmptyState(
+            icon: Icons.assignment_outlined,
+            title: 'Nenhuma Ordem de Serviço',
+          )
+        else
+          ...data.ultimasOS.take(5).map((os) => _buildMiniOsCard(context, theme, os)),
+      ],
+    );
+  }
+
+  Widget _buildMiniOsCard(BuildContext context, ThemeData theme, OrdemServico os) {
+    final cor = statusOsColor(os.status, atrasada: os.isAtrasada);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => OrdemServicoDetailScreen(ordemId: os.id),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: cor.withAlpha(25),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    '#${os.id}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: cor,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(os.clienteNome, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    if (os.motoDescricao != null)
+                      Text(os.motoDescricao!, style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              if (os.valorTotal > 0)
+                Text(
+                  'R\$ ${os.valorTotal.toStringAsFixed(2)}',
+                  style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IndicatorCard extends StatelessWidget {
+  const _IndicatorCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              value,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerItem extends StatelessWidget {
+  const _DrawerItem(this.icon, this.label, this.onTap);
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(label),
+      onTap: onTap,
+    );
+  }
+}

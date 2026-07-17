@@ -44,4 +44,8 @@ class ClienteService {
       parser: (json) => Cliente.fromJson(json as Map<String, dynamic>),
     );
   }
+
+  Future<void> deletar(int id) {
+    return _client.delete('/clientes/$id');
+  }
 }

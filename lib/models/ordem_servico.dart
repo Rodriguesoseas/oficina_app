@@ -1,132 +1,146 @@
 import '../utils/parse.dart';
-import 'cliente.dart';
-import 'item_estoque.dart';
-import 'moto.dart';
-import 'tipo_servico.dart';
 
 class OrdemServico {
   const OrdemServico({
     required this.id,
-    this.clienteId,
-    this.motoId,
-    required this.tipoServicoId,
+    required this.clienteId,
+    required this.clienteNome,
+    this.clienteTelefone,
+    required this.motoId,
+    this.motoDescricao,
+    this.motoPlaca,
     required this.status,
-    required this.valorPecas,
-    required this.valorMaoObra,
-    required this.valorTotal,
-    this.quilometragem,
-    this.observacao,
-    this.avulso = false,
-    this.avulsoNome,
-    this.avulsoTelefone,
-    this.avulsoMotoDescricao,
-    this.createdAt,
-    this.cliente,
-    this.moto,
-    this.tipoServico,
-    this.itens = const [],
+    this.problema,
+    this.diagnostico,
+    this.servicos = const [],
+    this.pecas = const [],
+    this.prazo,
+    this.valorServicos = 0,
+    this.valorPecas = 0,
+    this.valorTotal = 0,
+    this.dataEntrada,
+    this.dataSaida,
+    this.mecanico,
+    this.mecanicoId,
+    this.mecanicoNome,
+    this.observacoes,
+    this.checklist = const [],
   });
 
   final int id;
-  final int? clienteId;
-  final int? motoId;
-  final int tipoServicoId;
+  final int clienteId;
+  final String clienteNome;
+  final String? clienteTelefone;
+  final int motoId;
+  final String? motoDescricao;
+  final String? motoPlaca;
   final String status;
+  final String? problema;
+  final String? diagnostico;
+  final List<ServicoItem> servicos;
+  final List<PecaItem> pecas;
+  final DateTime? prazo;
+  final double valorServicos;
   final double valorPecas;
-  final double valorMaoObra;
   final double valorTotal;
-  final int? quilometragem;
-  final String? observacao;
-  final bool avulso;
-  final String? avulsoNome;
-  final String? avulsoTelefone;
-  final String? avulsoMotoDescricao;
-  final DateTime? createdAt;
-  final Cliente? cliente;
-  final Moto? moto;
-  final TipoServico? tipoServico;
-  final List<ItemOrdemServico> itens;
+  final DateTime? dataEntrada;
+  final DateTime? dataSaida;
+  final String? mecanico;
+  final int? mecanicoId;
+  final String? mecanicoNome;
+  final String? observacoes;
+  final List<String> checklist;
+
+  bool get isAberta => status == 'aberta';
+  bool get isFinalizada => status == 'finalizada';
+  bool get isAtrasada =>
+      prazo != null && prazo!.isBefore(DateTime.now()) && !isFinalizada;
 
   factory OrdemServico.fromJson(Map<String, dynamic> json) {
-    final itensJson = json['item_ordem_servicos'];
+    final servicosJson = json['servicos'];
+    final pecasJson = json['pecas'];
+    final checklistJson = json['checklist'];
+
     return OrdemServico(
-      id: json['id'] as int,
-      clienteId: parseInt(json['cliente_id']),
-      motoId: parseInt(json['moto_id']),
-      tipoServicoId: json['tipo_servico_id'] as int,
-      status: json['status']?.toString() ?? '',
+      id: parseInt(json['id']) ?? 0,
+      clienteId: parseInt(json['cliente_id']) ?? 0,
+      clienteNome: json['cliente_nome']?.toString() ?? '',
+      clienteTelefone: json['cliente_telefone']?.toString(),
+      motoId: parseInt(json['moto_id']) ?? 0,
+      motoDescricao: json['moto_descricao']?.toString(),
+      motoPlaca: json['moto_placa']?.toString(),
+      status: json['status']?.toString() ?? 'aberta',
+      problema: json['problema']?.toString(),
+      diagnostico: json['diagnostico']?.toString(),
+      servicos: servicosJson is List
+          ? servicosJson.whereType<Map<String, dynamic>>().map(ServicoItem.fromJson).toList()
+          : const [],
+      pecas: pecasJson is List
+          ? pecasJson.whereType<Map<String, dynamic>>().map(PecaItem.fromJson).toList()
+          : const [],
+      prazo: parseDateTime(json['prazo']),
+      valorServicos: parseDouble(json['valor_servicos']),
       valorPecas: parseDouble(json['valor_pecas']),
-      valorMaoObra: parseDouble(json['valor_mao_obra']),
       valorTotal: parseDouble(json['valor_total']),
-      quilometragem: parseInt(json['quilometragem']),
-      observacao: json['observacao']?.toString(),
-      avulso: json['avulso'] == true,
-      avulsoNome: json['avulso_nome']?.toString(),
-      avulsoTelefone: json['avulso_telefone']?.toString(),
-      avulsoMotoDescricao: json['avulso_moto_descricao']?.toString(),
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'].toString())
-          : null,
-      cliente: json['cliente'] is Map<String, dynamic>
-          ? Cliente.fromJson(json['cliente'] as Map<String, dynamic>)
-          : null,
-      moto: json['moto'] is Map<String, dynamic>
-          ? Moto.fromJson(json['moto'] as Map<String, dynamic>)
-          : null,
-      tipoServico: json['tipo_servico'] is Map<String, dynamic>
-          ? TipoServico.fromJson(json['tipo_servico'] as Map<String, dynamic>)
-          : null,
-      itens: itensJson is List
-          ? itensJson
-              .whereType<Map<String, dynamic>>()
-              .map(ItemOrdemServico.fromJson)
-              .toList()
+      dataEntrada: parseDateTime(json['data_entrada']),
+      dataSaida: parseDateTime(json['data_saida']),
+      mecanico: json['mecanico']?.toString(),
+      mecanicoId: json['mecanico_id'] as int?,
+      mecanicoNome: json['mecanico_nome']?.toString(),
+      observacoes: json['observacao']?.toString(),
+      checklist: checklistJson is List
+          ? checklistJson.whereType<String>().toList()
           : const [],
     );
   }
+}
 
-  String get tituloCliente {
-    if (avulso) {
-      return avulsoNome ?? 'Atendimento avulso';
-    }
-    return cliente?.nome ?? 'Cliente não informado';
-  }
+class ServicoItem {
+  const ServicoItem({
+    this.id,
+    required this.nome,
+    this.quantidade = 1,
+    this.valorUnitario = 0,
+  });
 
-  String get tituloMoto {
-    if (avulso) {
-      return avulsoMotoDescricao ?? 'Moto não informada';
-    }
-    return moto?.descricao ?? 'Moto não informada';
+  final int? id;
+  final String nome;
+  final int quantidade;
+  final double valorUnitario;
+
+  double get valorTotal => quantidade * valorUnitario;
+
+  factory ServicoItem.fromJson(Map<String, dynamic> json) {
+    return ServicoItem(
+      id: parseInt(json['id']),
+      nome: json['nome']?.toString() ?? '',
+      quantidade: parseInt(json['quantidade']) ?? 1,
+      valorUnitario: parseDouble(json['valor_unitario']),
+    );
   }
 }
 
-class ItemOrdemServico {
-  const ItemOrdemServico({
-    required this.id,
-    required this.itemEstoqueId,
-    required this.quantidade,
-    required this.precoUnitario,
-    required this.subtotal,
-    this.itemEstoque,
+class PecaItem {
+  const PecaItem({
+    this.id,
+    required this.nome,
+    this.quantidade = 1,
+    this.valorUnitario = 0,
   });
 
-  final int id;
-  final int itemEstoqueId;
+  final int? id;
+  final String nome;
   final int quantidade;
-  final double precoUnitario;
-  final double subtotal;
-  final ItemEstoque? itemEstoque;
+  final double valorUnitario;
 
-  factory ItemOrdemServico.fromJson(Map<String, dynamic> json) {
-    return ItemOrdemServico(
-      id: json['id'] as int,
-      itemEstoqueId: json['item_estoque_id'] as int,
-      quantidade: parseInt(json['quantidade']) ?? 0,
-      precoUnitario: parseDouble(json['preco_unitario']),
-      subtotal: parseDouble(json['subtotal']),
-      itemEstoque: json['item_estoque'] is Map<String, dynamic>
-          ? ItemEstoque.fromJson(json['item_estoque'] as Map<String, dynamic>)
-          : null,
+  double get valorTotal => quantidade * valorUnitario;
+
+  factory PecaItem.fromJson(Map<String, dynamic> json) {
+    return PecaItem(
+      id: parseInt(json['id']),
+      nome: json['nome']?.toString() ?? '',
+      quantidade: parseInt(json['quantidade']) ?? 1,
+      valorUnitario: parseDouble(json['valor_unitario']),
     );
   }
 }

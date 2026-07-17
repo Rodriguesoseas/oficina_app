@@ -8,17 +8,17 @@ class CatalogoService {
 
   final ApiClient _client;
 
-  Future<List<TipoServico>> listarTiposServico() {
-    return _client.get<List<TipoServico>>(
-      '/tipo_servicos',
-      parser: (data) => parseList(data as List, TipoServico.fromJson),
-    );
-  }
-
   Future<List<ItemEstoque>> listarItensEstoque() {
     return _client.get<List<ItemEstoque>>(
       '/item_estoques',
       parser: (data) => parseList(data as List, ItemEstoque.fromJson),
+    );
+  }
+
+  Future<ItemEstoque> detalheItemEstoque(int id) {
+    return _client.get<ItemEstoque>(
+      '/item_estoques/$id',
+      parser: (json) => ItemEstoque.fromJson(json as Map<String, dynamic>),
     );
   }
 
@@ -35,6 +35,13 @@ class CatalogoService {
       '/item_estoques',
       data: {'item_estoque': data},
       parser: (json) => ItemEstoque.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<List<TipoServico>> listarTiposServico() {
+    return _client.get<List<TipoServico>>(
+      '/tipo_servicos',
+      parser: (data) => parseList(data as List, TipoServico.fromJson),
     );
   }
 
