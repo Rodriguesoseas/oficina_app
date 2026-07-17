@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:dio/dio.dart';
 
 import '../../config/api_config.dart';
@@ -9,8 +11,8 @@ class ApiClient {
                 Dio(
                   BaseOptions(
                     baseUrl: ApiConfig.baseUrl,
-                    connectTimeout: const Duration(seconds: 60),
-                    receiveTimeout: const Duration(seconds: 60),
+                    connectTimeout: const Duration(seconds: 120),
+                    receiveTimeout: const Duration(seconds: 120),
                     headers: {
                       'Authorization': 'Bearer ${ApiConfig.apiToken}',
                       'Content-Type': 'application/json',
@@ -18,7 +20,7 @@ class ApiClient {
                     },
                   ),
                 ))
-          ..interceptors.add(_RetryInterceptor());
+          ..interceptors.add(_LogInterceptor());
 
   final Dio _dio;
 
@@ -43,6 +45,7 @@ class ApiClient {
       parser: parser,
     );
   }
+
   Future<T> patch<T>(
     String path, {
     dynamic data,
@@ -76,6 +79,10 @@ class ApiClient {
 
       return body as T;
     } on DioException catch (error) {
+      developer.log(
+        '[API] ${error.type.name}: ${error.message}',
+        name: 'ApiClient',
+      );
       throw _mapError(error);
     }
   }
@@ -94,44 +101,38 @@ class ApiClient {
       );
     }
 
+    final tipo = error.type;
+    final mensagem = error.message ?? 'Falha de conexão com a API';
+
     return ApiException(
-      message: error.message ?? 'Falha de conexão com a API',
+      message: tipo == DioExceptionType.connectionTimeout
+          ? 'O servidor demorou muito para responder. Verifique sua internet e tente novamente.'
+          : tipo == DioExceptionType.receiveTimeout
+              ? 'O servidor demorou muito para enviar os dados.'
+              : tipo == DioExceptionType.connectionError
+                  ? 'Não foi possível conectar ao servidor.'
+                  : mensagem,
       statusCode: response?.statusCode,
     );
   }
 }
 
-class _RetryInterceptor extends QueuedInterceptor {
-  static const _maxRetries = 3;
-
+class _LogInterceptor extends Interceptor {
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (!_deveRetentar(err)) {
-      return handler.next(err);
-    }
-
-    final options = err.requestOptions;
-    final attempt = (options.extra['_retryCount'] as int?) ?? 0;
-
-    if (attempt >= _maxRetries) {
-      return handler.next(err);
-    }
-
-    final delay = Duration(seconds: 2 * (1 << attempt));
-
-    await Future.delayed(delay);
-
-    options.extra['_retryCount'] = attempt + 1;
-
-    try {
-      final response = await Dio().fetch(options);
-      handler.resolve(response);
-    } on DioException catch (retryError) {
-      handler.next(retryError);
-    }
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    developer.log(
+      '[API] ${options.method} ${options.baseUrl}${options.path}',
+      name: 'ApiClient',
+    );
+    handler.next(options);
   }
 
-  bool _deveRetentar(DioException err) {
-    return err.type == DioExceptionType.connectionError;
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    developer.log(
+      '[API] Erro ${err.type.name}: ${err.message}',
+      name: 'ApiClient',
+    );
+    handler.next(err);
   }
 }
