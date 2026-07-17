@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
   ApiConfig._();
 
@@ -9,6 +11,13 @@ class ApiConfig {
 
   static String get baseUrl {
     if (_url.isNotEmpty) return _url;
+
+    if (kDebugMode) {
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        return 'http://10.0.2.2:3000/api/v1';
+      }
+      return 'http://localhost:3000/api/v1';
+    }
 
     return 'https://oficina-api-kmdf.onrender.com/api/v1';
   }
