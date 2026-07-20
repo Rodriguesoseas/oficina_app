@@ -46,3 +46,9 @@ app.*.map.json
 
 # Android Studio local SDK path (machine-specific)
 local.properties
+
+# Node.js
+node_modules/
+
+# Backup files
+*.bak
