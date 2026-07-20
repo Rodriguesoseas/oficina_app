@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const dir = 'C:\\Users\\oseas\\oficina_app\\build\\web';
+const dir = path.resolve(__dirname, 'build', 'web');
 const types = {
   '.html': 'text/html',
   '.js': 'application/javascript',

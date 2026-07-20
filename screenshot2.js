@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
 
-const EDGE_PATH = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const EDGE_PATH = process.env.EDGE_PATH || 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const APP_URL = 'http://localhost:5000';
 const OUTPUT_DIR = path.resolve(__dirname, '..', 'oficina_api', 'docs', 'screenshots');
 
