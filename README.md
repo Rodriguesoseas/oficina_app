@@ -1,50 +1,99 @@
-# Oficina App
+# A2M Motos App
 
-App mobile Flutter para a API Rails de gestão de oficina de motos.
+Aplicativo mobile desenvolvido em **Flutter** para gerenciamento de oficinas de motocicletas.
 
-## Pré-requisitos
+O sistema foi criado para centralizar as principais operações da oficina em um único aplicativo, permitindo o gerenciamento de clientes, motos, ordens de serviço e estoque diretamente pelo dispositivo móvel, integrado à API desenvolvida em Ruby on Rails.
 
-- API Rails rodando em `http://localhost:3000` (ver [oficina_api](../oficina_api/README.md))
-- Flutter SDK 3.29+
+## Funcionalidades
 
-## Configuração da API
+- 📋 Dashboard com indicadores da oficina
+- 👥 Gerenciamento de clientes
+- 🏍️ Gerenciamento de motocicletas
+- 🔧 Gerenciamento de Ordens de Serviço
+- 📦 Controle de estoque
+- 📅 Agenda de atendimentos
+- 🔍 Pesquisa rápida de clientes e motos
+- 🔄 Integração com API REST
+- 📱 Interface otimizada para dispositivos móveis
 
-A URL base está em `lib/config/api_config.dart`:
+## Tecnologias
 
-| Ambiente | URL |
-|----------|-----|
-| Emulador Android | `http://10.0.2.2:3000/api/v1` |
-| iOS / desktop / WSL | `http://localhost:3000/api/v1` |
+- Flutter
+- Dart
+- Riverpod
+- Material Design 3
+- HTTP
+- Ruby on Rails (API)
+- PostgreSQL
 
-## Rodar no Windows (recomendado para emulador Android)
+## Arquitetura
 
-1. Suba a API no WSL:
-   ```bash
-   cd /home/oseas/oficina_api
-   API_TOKEN=dev-token bundle exec rails server -b 0.0.0.0 -p 3000
-   ```
+O aplicativo consome uma API REST responsável por toda a regra de negócio e persistência dos dados.
 
-2. No Windows, abra o projeto:
-   ```powershell
-   cd \\wsl$\Ubuntu\home\oseas\oficina_app
-   flutter pub get
-   flutter run
-   ```
-
-## Rodar no WSL
-
-```bash
-export PATH="/home/oseas/flutter/bin:$PATH"
-cd /home/oseas/oficina_app
-flutter pub get
-flutter analyze
+```text
+Flutter
+    │
+    ▼
+Ruby on Rails API
+    │
+    ▼
+PostgreSQL
 ```
 
-Para dispositivo Android físico ou emulador, prefira executar o Flutter no Windows.
+## Estrutura do Projeto
 
-## Telas do MVP
+```text
+lib/
+├── config/
+├── core/
+├── models/
+├── providers/
+├── screens/
+├── services/
+├── theme/
+├── utils/
+└── widgets/
+```
 
-- Home com ordens de serviço recentes
-- Busca de cliente e moto por placa
-- Atendimento rápido (avulso, cliente/moto novos ou existentes)
-- Detalhe da ordem de serviço
+## Executando o Projeto
+
+### Pré-requisitos
+
+- Flutter SDK 3.29 ou superior
+- Android Studio ou VS Code
+- Backend da Oficina API em execução
+
+### Instalação
+
+```bash
+git clone https://github.com/Rodriguesoseas/oficina_app.git
+
+cd oficina_app
+
+flutter pub get
+
+flutter run
+```
+
+## API
+
+Este aplicativo utiliza a **Oficina API**, desenvolvida em Ruby on Rails.
+
+Repositório:
+
+https://github.com/Rodriguesoseas/oficina_api
+
+## Objetivo
+
+O projeto foi desenvolvido com foco na informatização de oficinas de motocicletas, oferecendo uma solução mobile simples, intuitiva e integrada para auxiliar no controle das operações diárias.
+
+## Status
+
+🟢 Projeto concluído e em produção.
+
+## Autor
+
+**Oseas de Sousa Rodrigues**
+
+- GitHub: https://github.com/Rodriguesoseas
+- LinkedIn: https://www.linkedin.com/in/oseas-rodrigues-53971b161
