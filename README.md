@@ -16,8 +16,6 @@ A URL base está em `lib/config/api_config.dart`:
 | Emulador Android | `http://10.0.2.2:3000/api/v1` |
 | iOS / desktop / WSL | `http://localhost:3000/api/v1` |
 
-Token padrão: `dev-token` (mesmo valor de `API_TOKEN` no backend).
-
 ## Rodar no Windows (recomendado para emulador Android)
 
 1. Suba a API no WSL:
