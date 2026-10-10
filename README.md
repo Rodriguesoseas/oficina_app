@@ -96,4 +96,4 @@ O projeto foi desenvolvido com foco na informatização de oficinas de motocicle
 **Oseas de Sousa Rodrigues**
 
 - GitHub: https://github.com/Rodriguesoseas
-- LinkedIn: https://www.linkedin.com/in/oseas-rodrigues-53971b161
+- LinkedIn: www.linkedin.com/in/oseasrodrigues-dev
